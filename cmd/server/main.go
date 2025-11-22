@@ -13,7 +13,11 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// Init databases
-	database.ConnectClickHouse(&cfg)
+	database.ConnectClickHouse(
+		cfg.ClickHouseHost,
+		cfg.ClickHouseUser,
+		cfg.ClickHousePassword,
+	)
 	database.ConnectPostgres(&cfg)
 	database.ConnectRedis(&cfg)
 

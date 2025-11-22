@@ -14,6 +14,7 @@ type Config struct {
 	ClickHouseHost     string
 	ClickHouseUser     string
 	ClickHousePassword string
+	ClickHouseSecure   bool
 
 	// Neon Postgres
 	PostgresURL string
@@ -32,9 +33,10 @@ func LoadConfig() Config {
 		ServerPort: get("SERVER_PORT", "8080"),
 
 		// ✔ NEW ClickHouse format
-		ClickHouseHost:     get("CLICKHOUSE_HOST", "localhost:8443"),
+		ClickHouseHost:     get("CLICKHOUSE_HOST", "localhost:9440"),
 		ClickHouseUser:     get("CLICKHOUSE_USER", "default"),
 		ClickHousePassword: get("CLICKHOUSE_PASSWORD", ""),
+		ClickHouseSecure:   get("CLICKHOUSE_SECURE", "false") == "true",
 
 		// Neon Postgres
 		PostgresURL: get("POSTGRES_URL", ""),

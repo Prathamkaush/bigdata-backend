@@ -1,38 +1,46 @@
 package database
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
-	"os"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 )
 
-func ConnectClickHouse() clickhouse.Conn {
+var ClickHouse clickhouse.Conn
+
+func ConnectClickHouse(host, user, password string) {
+	ctx := context.Background()
+
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{
-			os.Getenv("CLICKHOUSE_HOST"), // host:8443
-		},
+		Addr: []string{host}, // Example: "zs62tr9pg6.ap-south-1.aws.clickhouse.cloud:9440"
+
 		Auth: clickhouse.Auth{
 			Database: "default",
-			Username: os.Getenv("CLICKHOUSE_USER"),
-			Password: os.Getenv("CLICKHOUSE_PASSWORD"),
+			Username: user,
+			Password: password,
 		},
+
+		// TLS FIX HERE
 		TLS: &tls.Config{
-			InsecureSkipVerify: true, // REQUIRED for ClickHouse Cloud
+			InsecureSkipVerify: true,
 		},
-		Protocol: clickhouse.HTTP, // IMPORTANT!!
+
+		Settings: clickhouse.Settings{
+			"max_execution_time": 60,
+		},
 	})
 
 	if err != nil {
-		log.Fatal("❌ ClickHouse connect failed:", err)
+		log.Fatalf("❌ ClickHouse connect error: %v", err)
 	}
 
-	// ping
-	if err := conn.Ping(); err != nil {
-		log.Fatal("❌ ClickHouse ping failed:", err)
+	// Ping requires context
+	if err := conn.Ping(ctx); err != nil {
+		log.Fatalf("❌ ClickHouse ping error: %v", err)
 	}
 
-	log.Println("✅ ClickHouse connected!")
-	return conn
+	log.Println("✅ ClickHouse connected successfully!")
+	ClickHouse = conn
 }
