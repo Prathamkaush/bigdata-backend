@@ -1,0 +1,4 @@
+source,source_id,customer_id,first_name,last_name,email,phone,city,state,country,ingest_ts
+marketing,001,CUST-001,Pratham,Kaushik,pratham@example.com,+91 9876543210,Delhi,Delhi,India,
+sales,002,CUST-002,Nina,Sharma,nina@example.com,9876543209,Mumbai,MH,India,
+ads,003,CUST-003,Rohit,Verma,rohit@example.com,9998877766,Jaipur,RJ,India,

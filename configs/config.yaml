@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+clickhouse:
+  url: localhost:9000
+
+postgres:
+  url: postgres://user:pass@localhost:5432/bigdata
+
+redis:
+  url: localhost:6379

@@ -1,0 +1,99 @@
+/bigdata-api
+│
+├── cmd/
+│   └── server/
+│       └── main.go
+│           → Application entrypoint: loads config, connects Postgres/Redis/ClickHouse,
+│             initializes Fiber, mounts routes.
+│
+├── internal/
+│   ├── config/
+│   │   └── config.go
+│   │        → Reads .env / config.yaml, loads DB URLs + admin key.
+│   │
+│   ├── database/
+│   │   ├── clickhouse.go     → ClickHouse driver (9000) for ingestion + analytics.
+│   │   ├── postgres.go       → User, credits, logs, usage tables.
+│   │   └── redis.go          → Redis for rate-limit & caching.
+│   │
+│   ├── ingestion/
+│   │   ├── reader.go         → Reads CSV / JSON / XML streaming.
+│   │   ├── normalize.go      → Normalize email, phone, names.
+│   │   ├── dedupe.go         → Generates dedupe_key using hash.
+│   │   └── loader.go         → Batch inserts → ClickHouse.
+│   │
+│   ├── models/
+│   │   ├── user.go           → Users (id, username, api_key, credits, role).
+│   │   ├── credits.go        → Credits & credit logs.
+│   │   ├── logs.go           → API request logs.
+│   │   └── record.go         → QueryRequest struct for API queries.
+│   │
+│   ├── repository/
+│   │   ├── user_repo.go      → GetUserByHash, CreateUser, GetAllUsers.
+│   │   ├── credit_repo.go    → AddCredits, DeductCredits, GetCredits.
+│   │   ├── usage_repo.go     → Daily usage insert, update & fetch.
+│   │   ├── logs_repo.go      → Insert logs + fetch logs by user.
+│   │   └── record_repo.go    → ClickHouse SELECT + COUNT queries.
+│   │
+│   ├── services/
+│   │   ├── query_service.go  → WHERE builder + ClickHouse SQL generator.
+│   │   ├── user_service.go   → Validate API key → returns user_id.
+│   │   └── credit_service.go → Credit deduction wrapper.
+│   │
+│   ├── api/
+│   │   ├── middlewares/
+│   │   │   ├── auth.go         → Verify x-api-key, sets c.Locals("user_id").
+│   │   │   ├── admin.go        → Restrict only admin.
+│   │   │   ├── credits.go      → Deduct 1 credit per request.
+│   │   │   ├── logging.go      → Logs each API request.
+│   │   │   └── ratelimit.go    → Redis-based rate limiter.
+│   │   │
+│   │   ├── controllers/
+│   │   │   ├── query_controller.go → POST /v1/query
+│   │   │   ├── stats_controller.go → GET /v1/stats (analytics)
+│   │   │   ├── admin_controller.go → Create user, add credits, get users
+│   │   │   └── logs_controller.go  → GET /v1/admin/logs
+│   │   │
+│   │   └── routes/
+│   │       └── routes.go
+│   │           → Declares all public, user, and admin routes.
+│   │
+│   └── utils/
+│       ├── cache.go
+│       ├── logger.go
+│       └── hasher.go
+│
+├── scripts/
+│   ├── ingest_csv.go
+│   ├── ingest_json.go
+│   ├── ingest_xml.go
+│   └── migrate.go
+│
+├── configs/config.yaml
+│
+├── deploy/
+│   ├── docker/
+│   │   ├── Dockerfile.api
+│   │   ├── Dockerfile.ingest
+│   │   └── docker-compose.yml
+│   └── k8s/
+│       ├── api-deployment.yaml
+│       ├── api-service.yaml
+│       └── clickhouse-statefulset.yaml (optional)
+│
+├── go.mod
+├── go.sum
+└── README.md
+
+
+Backend
+
+✔ Full backend architecture complete
+✔ All controllers, middlewares, services, repo layers completed
+✔ Dockerfile.api created
+✔ Dockerfile.ingest created
+✔ Kubernetes manifests started
+✔ docker-compose.yml created
+✔ Project structure is correct
+✔ Go version issue fixed (your project requires Go 1.22–1.23)
+✔ Backend builds successfully now

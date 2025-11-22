@@ -1,0 +1,10 @@
+<records>
+    <record>
+        <email>a@example.com</email>
+        <first_name>A</first_name>
+    </record>
+    <record>
+        <email>b@example.com</email>
+        <first_name>B</first_name>
+    </record>
+</records>

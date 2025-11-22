@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bigdata-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bigdata-api
+  template:
+    metadata:
+      labels:
+        app: bigdata-api
+    spec:
+      containers:
+      - name: api
+        image: bigdata/api:latest
+        ports:
+          - containerPort: 8080
+        env:
+          - name: DATABASE_URL
+            value: "postgres://postgres:password@postgres:5432/postgres?sslmode=disable"
+          - name: CLICKHOUSE_URL
+            value: "clickhouse://default:@clickhouse:9000/default"
+          - name: REDIS_ADDR
+            value: "redis:6379"
+          - name: ADMIN_API_KEY
+            value: "test"

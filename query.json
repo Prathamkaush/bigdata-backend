@@ -1,0 +1,16 @@
+{
+  "filters": {
+    "country": "India",
+    "city": "Delhi"
+  },
+  "range": {
+    "ingest_ts": { "from": "2025-10-01 00:00:00", "to": "2025-10-31 23:59:59" }
+  },
+  "fuzzy": {
+    "first_name": { "query": "Prath" }
+  },
+  "limit": 50,
+  "offset": 0,
+  "sort": "ingest_ts DESC",
+  "format": "json"
+}

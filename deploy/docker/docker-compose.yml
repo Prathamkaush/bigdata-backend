@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: ../../        # backend root
+      dockerfile: deploy/docker/Dockerfile.api
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: "postgres://postgres:password@postgres:5432/postgres?sslmode=disable"
+      CLICKHOUSE_URL: "clickhouse://default:@clickhouse:9000/default"
+      REDIS_ADDR: "redis:6379"
+      ADMIN_API_KEY: "test"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    ports:
+      - "9000:9000"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
