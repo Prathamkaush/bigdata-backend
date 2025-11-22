@@ -12,15 +12,14 @@ func LoggingMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		start := time.Now()
-		path := c.Path()
-		method := c.Method()
 
-		// Read body safely
+		// Save request body safely
 		reqBody := string(c.Body())
 
-		// Continue
+		// Continue request
 		err := c.Next()
 
+		// After handler
 		status := c.Response().StatusCode()
 		duration := time.Since(start).Milliseconds()
 
@@ -29,11 +28,12 @@ func LoggingMiddleware() fiber.Handler {
 			userID = uid.(int)
 		}
 
+		// ✅ NEW FIXED CALL — matches your current repository function
 		repository.LogAPIRequest(
 			context.Background(),
 			userID,
-			path,
-			method,
+			c.Path(),
+			c.Method(),
 			status,
 			int(duration),
 			reqBody,

@@ -28,6 +28,7 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 	// -----------------------------------------------------
 	api.Get("/health", controllers.HealthCheck)
 	api.Get("/metrics", controllers.MetricsController)
+	api.Post("/admin/verify-key", controllers.VerifyKeyController)
 
 	// -----------------------------------------------------
 	// USER ROUTES (API KEY REQUIRED + RATE LIMIT)
