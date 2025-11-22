@@ -49,6 +49,7 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 	// -----------------------------------------------------
 	admin := api.Group("/admin",
 		middlewares.AdminMiddleware(), // only admin API key allowed
+		middlewares.LoggingMiddleware(),
 	)
 
 	// moved stats → no rate-limit now

@@ -7,11 +7,28 @@ import (
 )
 
 // LogAPIRequest inserts a simple log entry (matching your DB schema)
-func LogAPIRequest(ctx context.Context, userID int, endpoint string, params string, creditsUsed int) error {
+func LogAPIRequest(
+	ctx context.Context,
+	userID int,
+	endpoint string,
+	method string,
+	statusCode int,
+	responseMs int,
+	requestBody string,
+) error {
+
 	_, err := database.Postgres.Exec(ctx, `
-INSERT INTO api_logs (user_id, endpoint, params, credits_used, created_at)
-VALUES ($1, $2, $3, $4, NOW())
-`, userID, endpoint, params, creditsUsed)
+        INSERT INTO api_logs 
+        (user_id, endpoint, method, status_code, response_time_ms, request_body, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    `,
+		userID,
+		endpoint,
+		method,
+		statusCode,
+		responseMs,
+		requestBody,
+	)
 
 	return err
 }

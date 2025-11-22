@@ -12,9 +12,16 @@ func LoggingMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		start := time.Now()
+		path := c.Path()
+		method := c.Method()
 
+		// Read body safely
+		reqBody := string(c.Body())
+
+		// Continue
 		err := c.Next()
 
+		status := c.Response().StatusCode()
 		duration := time.Since(start).Milliseconds()
 
 		userID := 0
@@ -22,21 +29,15 @@ func LoggingMiddleware() fiber.Handler {
 			userID = uid.(int)
 		}
 
-		endpoint := c.Path()
-		method := c.Method()
-		status := c.Response().StatusCode()
-
-		// Call new simplified logger
-		go repository.LogAPIRequest(
+		repository.LogAPIRequest(
 			context.Background(),
 			userID,
-			endpoint,
+			path,
 			method,
 			status,
+			int(duration),
+			reqBody,
 		)
-
-		// Debug log
-		println("LOG:", userID, endpoint, method, status, duration, "ms")
 
 		return err
 	}
