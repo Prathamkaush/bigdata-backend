@@ -1,48 +1,38 @@
 package database
 
 import (
-	"context"
 	"crypto/tls"
 	"log"
-	"time"
+	"os"
 
-	"bigdata-api/internal/config"
-
-	ch "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2"
 )
 
-var ClickHouse ch.Conn
-
-func ConnectClickHouse(cfg *config.Config) {
-	conn, err := ch.Open(&ch.Options{
-		Addr: []string{cfg.ClickHouseHost}, // host:port only e.g. zs62xxxxx:8443
-
-		Auth: ch.Auth{
+func ConnectClickHouse() clickhouse.Conn {
+	conn, err := clickhouse.Open(&clickhouse.Options{
+		Addr: []string{
+			os.Getenv("CLICKHOUSE_HOST"), // host:8443
+		},
+		Auth: clickhouse.Auth{
 			Database: "default",
-			Username: cfg.ClickHouseUser,
-			Password: cfg.ClickHousePassword,
+			Username: os.Getenv("CLICKHOUSE_USER"),
+			Password: os.Getenv("CLICKHOUSE_PASSWORD"),
 		},
-
-		Protocol: ch.HTTP,       // ✔️ REQUIRED for ClickHouse Cloud
-		TLS:      &tls.Config{}, // ✔️ HTTPS enabled
-
-		Settings: ch.Settings{
-			"max_execution_time": 60,
+		TLS: &tls.Config{
+			InsecureSkipVerify: true, // REQUIRED for ClickHouse Cloud
 		},
-
-		DialTimeout:  10 * time.Second,
-		MaxIdleConns: 5,
-		MaxOpenConns: 10,
+		Protocol: clickhouse.HTTP, // IMPORTANT!!
 	})
 
 	if err != nil {
-		log.Fatalf("❌ ClickHouse connection failed: %v", err)
+		log.Fatal("❌ ClickHouse connect failed:", err)
 	}
 
-	if err := conn.Ping(context.Background()); err != nil {
-		log.Fatalf("❌ ClickHouse ping failed: %v", err)
+	// ping
+	if err := conn.Ping(); err != nil {
+		log.Fatal("❌ ClickHouse ping failed:", err)
 	}
 
-	ClickHouse = conn
-	log.Println("🟢 Connected to ClickHouse Cloud (HTTPS)")
+	log.Println("✅ ClickHouse connected!")
+	return conn
 }
