@@ -16,7 +16,7 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 	// GLOBAL CORS
 	// -----------------------------------------------------
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
+		AllowOrigins: "http://localhost:5173, https://bigdata-gilt.vercel.app/",
 		AllowHeaders: "Origin, Content-Type, Accept, x-api-key",
 		AllowMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 	}))
