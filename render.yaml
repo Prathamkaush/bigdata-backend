@@ -4,7 +4,7 @@ services:
     env: go
 
     build:
-      
+      version: "1.25.0"
       buildCommand: "go build -tags netgo -ldflags='-s -w' -o app ./cmd/server"
 
     startCommand: "./app"
