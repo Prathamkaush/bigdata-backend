@@ -26,3 +26,4 @@ Thumbs.db
 # Editor-specific files
 *~
 .#*
+.env
