@@ -2,9 +2,10 @@ services:
   - type: web
     name: bigdata-backend
     env: go
-    rootDir: .
-    buildCommand: "go build -tags netgo -ldflags='-s -w' -o app ./cmd/server"
+
+    build:
+      version: "1.25.3"
+      buildCommand: "go build -tags netgo -ldflags='-s -w' -o app ./cmd/server"
+
     startCommand: "./app"
-    envVars:
-      - key: GO_VERSION
-        value: 1.26.0
+
