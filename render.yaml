@@ -2,8 +2,19 @@ services:
   - type: web
     name: bigdata-backend
     env: go
-    buildCommand: "go build -o app ./cmd/server"
+
+    build:
+      version: 1.25.3          # 🔥 THIS IS REQUIRED
+      buildCommand: "go build -o app ./cmd/server"
+
     startCommand: "./app"
+
     envVars:
-      - key: GO_VERSION
-        value: 1.25.3
+      - key: SERVER_PORT
+        value: 8080
+      - key: CLICKHOUSE_URL
+        sync: false
+      - key: POSTGRES_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
