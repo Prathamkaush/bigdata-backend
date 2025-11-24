@@ -6,9 +6,12 @@ import (
 	"errors"
 )
 
+// ===============================
+// GET USER CREDITS
+// ===============================
 func GetCredits(ctx context.Context, userID int) (int, error) {
 	row := database.Postgres.QueryRow(ctx,
-		`SELECT credits FROM user_credits WHERE user_id = $1`,
+		`SELECT credits FROM users WHERE id = $1`,
 		userID,
 	)
 
@@ -21,10 +24,13 @@ func GetCredits(ctx context.Context, userID int) (int, error) {
 	return credits, nil
 }
 
+// ===============================
+// DEDUCT CREDITS
+// ===============================
 func DeductCredits(ctx context.Context, userID int, amount int) error {
 	// Check balance
 	row := database.Postgres.QueryRow(ctx,
-		`SELECT credits FROM user_credits WHERE user_id = $1`,
+		`SELECT credits FROM users WHERE id = $1`,
 		userID,
 	)
 
@@ -39,19 +45,8 @@ func DeductCredits(ctx context.Context, userID int, amount int) error {
 
 	// Deduct
 	_, err := database.Postgres.Exec(ctx,
-		`UPDATE user_credits 
-		 SET credits = credits - $1 
-		 WHERE user_id = $2`,
-		amount, userID,
-	)
-
-	return err
-}
-
-func AddCredits(ctx context.Context, userID int, amount int) error {
-	_, err := database.Postgres.Exec(ctx,
 		`UPDATE users 
-         SET credits = credits + $1
+         SET credits = credits - $1 
          WHERE id = $2`,
 		amount, userID,
 	)
@@ -59,10 +54,26 @@ func AddCredits(ctx context.Context, userID int, amount int) error {
 	return err
 }
 
+// ===============================
+// ADD CREDITS
+// ===============================
+func AddCredits(ctx context.Context, userID int, amount int) error {
+	_, err := database.Postgres.Exec(ctx,
+		`UPDATE users 
+         SET credits = credits + $1
+         WHERE id = $2`,
+		amount, userID)
+
+	return err
+}
+
+// ===============================
+// LOG CREDIT USAGE
+// ===============================
 func LogCreditUsage(ctx context.Context, userID int, amount int, endpoint string) {
 	database.Postgres.Exec(ctx,
-		`INSERT INTO credit_logs (user_id, credits_used, endpoint)
-		 VALUES ($1, $2, $3)`,
-		userID, amount, endpoint,
+		`INSERT INTO credit_logs (user_id, change_amount, reason)
+         VALUES ($1, $2, $3)`,
+		userID, -amount, endpoint,
 	)
 }

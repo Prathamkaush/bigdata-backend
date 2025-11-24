@@ -72,3 +72,41 @@ LIMIT 30
 
 	return list, nil
 }
+
+// GetGlobalDailyUsage returns today's combined usage for all users.
+func GetGlobalDailyUsage(ctx context.Context) (*DailyUsage, error) {
+	row := database.Postgres.QueryRow(ctx, `
+        SELECT COALESCE(SUM(requests),0), COALESCE(SUM(credits_used),0)
+        FROM daily_usage
+        WHERE date = CURRENT_DATE
+    `)
+
+	var du DailyUsage
+	if err := row.Scan(&du.Requests, &du.CreditsUsed); err != nil {
+		return &DailyUsage{Requests: 0, CreditsUsed: 0}, nil
+	}
+
+	return &du, nil
+}
+
+func TotalRequestsByUser(ctx context.Context, userID int) (int, error) {
+	var total int
+	err := database.Postgres.QueryRow(ctx, `
+        SELECT COALESCE(SUM(requests), 0)
+        FROM daily_usage
+        WHERE user_id = $1
+    `, userID).Scan(&total)
+
+	return total, err
+}
+
+func TotalCreditsUsedByUser(ctx context.Context, userID int) (int, error) {
+	var total int
+	err := database.Postgres.QueryRow(ctx, `
+        SELECT COALESCE(SUM(credits_used), 0)
+        FROM daily_usage
+        WHERE user_id = $1
+    `, userID).Scan(&total)
+
+	return total, err
+}

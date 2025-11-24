@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func generateNewAPIKey() string {
@@ -22,26 +23,49 @@ func generateNewAPIKey() string {
 }
 
 func RegenerateAPIKeyController(c *fiber.Ctx) error {
+	// GET USER ID
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": "invalid user id",
+		})
+	}
 
-	userID := c.Locals("user_id").(int)
+	// FETCH USER
+	user, err := repository.GetUserByID(context.Background(), id)
+	if err != nil || user == nil {
+		return c.Status(404).JSON(fiber.Map{
+			"error": "user not found",
+		})
+	}
 
-	// generate new key
-	newKey := generateNewAPIKey()
+	// DO NOT ALLOW ADMIN KEY REGEN
+	if user.Role == "admin" {
+		return c.Status(403).JSON(fiber.Map{
+			"error": "Admin API key cannot be regenerated",
+		})
+	}
 
-	hash := sha256.Sum256([]byte(newKey))
+	// CREATE NEW RAW KEY
+	rawKey := uuid.New().String()
+
+	// HASH IT
+	hash := sha256.Sum256([]byte(rawKey))
 	hashedKey := hex.EncodeToString(hash[:])
 
-	err := repository.UpdateAPIKey(context.Background(), userID, hashedKey)
+	// UPDATE IN DB
+	err = repository.UpdateAPIKey(context.Background(), user.ID, hashedKey)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to update key"})
+		return c.Status(500).JSON(fiber.Map{
+			"error": "failed to update key",
+		})
 	}
 
 	return c.JSON(fiber.Map{
-		"success": true,
-		"api_key": newKey,
+		"message": "API key regenerated",
+		"api_key": rawKey,
 	})
 }
-
 func GetAdminAPIKey(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(int)
 

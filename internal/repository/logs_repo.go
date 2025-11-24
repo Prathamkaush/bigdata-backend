@@ -3,10 +3,10 @@ package repository
 import (
 	"bigdata-api/internal/database"
 	"context"
+	"encoding/json"
 	"time"
 )
 
-// LogAPIRequest inserts a simple log entry (matching your DB schema)
 func LogAPIRequest(
 	ctx context.Context,
 	userID int,
@@ -17,17 +17,27 @@ func LogAPIRequest(
 	requestBody string,
 ) error {
 
-	_, err := database.Postgres.Exec(ctx, `
-        INSERT INTO api_logs 
-        (user_id, endpoint, method, status_code, response_time_ms, request_body, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+	params := map[string]interface{}{
+		"method":       method,
+		"status_code":  statusCode,
+		"response_ms":  responseMs,
+		"request_body": requestBody,
+	}
+
+	// IMPORTANT: Convert params map → JSON
+	jsonParams, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Postgres.Exec(ctx, `
+        INSERT INTO api_logs (user_id, endpoint, params, credits_used, created_at)
+        VALUES ($1, $2, $3::jsonb, $4, NOW())
     `,
 		userID,
 		endpoint,
-		method,
-		statusCode,
-		responseMs,
-		requestBody,
+		jsonParams,
+		1, // default credit
 	)
 
 	return err
@@ -36,35 +46,78 @@ func LogAPIRequest(
 // FetchLogs returns recent logs in a simple shape the frontend can use
 func FetchLogs(ctx context.Context) ([]map[string]interface{}, error) {
 	rows, err := database.Postgres.Query(ctx, `
-SELECT id, user_id, endpoint, params, credits_used, created_at
-FROM api_logs
-ORDER BY created_at DESC
-LIMIT 200
-`)
+        SELECT id, user_id, endpoint, params, credits_used, created_at
+        FROM api_logs
+        ORDER BY created_at DESC
+        LIMIT 200
+    `)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var result []map[string]interface{}
+	var logs []map[string]interface{}
+
 	for rows.Next() {
 		var id, userID, creditsUsed int
-		var endpoint, params string
+		var endpoint string
+		var paramsJson []byte
 		var createdAt time.Time
 
-		if err := rows.Scan(&id, &userID, &endpoint, &params, &creditsUsed, &createdAt); err != nil {
+		err := rows.Scan(&id, &userID, &endpoint, &paramsJson, &creditsUsed, &createdAt)
+		if err != nil {
 			continue
 		}
 
-		result = append(result, map[string]interface{}{
+		logs = append(logs, map[string]interface{}{
 			"id":           id,
 			"user_id":      userID,
 			"endpoint":     endpoint,
-			"params":       params,
+			"params":       string(paramsJson),
 			"credits_used": creditsUsed,
 			"created_at":   createdAt.Format(time.RFC3339),
 		})
 	}
 
-	return result, nil
+	return logs, nil
+}
+
+func FetchLogsByUser(ctx context.Context, userID int) ([]map[string]interface{}, error) {
+	rows, err := database.Postgres.Query(ctx, `
+        SELECT id, endpoint, params, credits_used, created_at
+        FROM api_logs
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 50
+    `, userID)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []map[string]interface{}
+
+	for rows.Next() {
+		var id int
+		var endpoint string
+		var paramsJson []byte
+		var credits int
+		var createdAt time.Time
+
+		err := rows.Scan(&id, &endpoint, &paramsJson, &credits, &createdAt)
+		if err != nil {
+			continue
+		}
+
+		logs = append(logs, map[string]interface{}{
+			"id":           id,
+			"endpoint":     endpoint,
+			"credits_used": credits,
+			"params":       string(paramsJson),
+			"created_at":   createdAt.Format(time.RFC3339),
+		})
+	}
+
+	return logs, nil
 }

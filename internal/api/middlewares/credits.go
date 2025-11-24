@@ -79,7 +79,6 @@ func CreditsMiddleware() fiber.Handler {
 		headerRows := c.Get("X-Records-Returned", "0")
 		returnedRows, _ := strconv.Atoi(headerRows)
 		creditsToDeduct := calculateCredits(returnedRows)
-
 		// Deduct credits
 		err = repository.DeductCredits(context.Background(), uid, creditsToDeduct)
 		if err != nil {
@@ -87,6 +86,12 @@ func CreditsMiddleware() fiber.Handler {
 			return c.Status(402).JSON(fiber.Map{
 				"error": "insufficient credits",
 			})
+		}
+
+		// 📌 NEW: Increment daily usage stats
+		err = repository.IncrementDailyUsage(context.Background(), uid, creditsToDeduct)
+		if err != nil {
+			utils.Error("Failed to update daily usage: " + err.Error())
 		}
 
 		// Log credit usage (async fire-and-forget)

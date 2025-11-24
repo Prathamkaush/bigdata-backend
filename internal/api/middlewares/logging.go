@@ -3,6 +3,7 @@ package middlewares
 import (
 	"bigdata-api/internal/repository"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,33 +12,35 @@ import (
 func LoggingMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
-		start := time.Now()
-
-		// Save request body safely
+		startTime := time.Now()
 		reqBody := string(c.Body())
 
-		// Continue request
+		// continue request
 		err := c.Next()
 
-		// After handler
 		status := c.Response().StatusCode()
-		duration := time.Since(start).Milliseconds()
+		durationMs := int(time.Since(startTime).Milliseconds())
 
+		// Extract user_id set by Auth middleware
 		userID := 0
 		if uid := c.Locals("user_id"); uid != nil {
 			userID = uid.(int)
 		}
 
-		// ✅ NEW FIXED CALL — matches your current repository function
-		repository.LogAPIRequest(
+		// SAVE LOG
+		logErr := repository.LogAPIRequest(
 			context.Background(),
 			userID,
 			c.Path(),
 			c.Method(),
 			status,
-			int(duration),
+			durationMs,
 			reqBody,
 		)
+
+		if logErr != nil {
+			fmt.Println("🔥 ERROR SAVING LOG:", logErr.Error())
+		}
 
 		return err
 	}

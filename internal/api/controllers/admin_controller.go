@@ -1,59 +1,108 @@
 package controllers
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
-
 	"bigdata-api/internal/repository"
-	"bigdata-api/internal/utils"
+	"context"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 )
 
-// ------------------------------------------------------
-// 1. CREATE USER (Admin) — SECURE (hashed API key)
-// ------------------------------------------------------
-
+// ==============================================
+// CREATE USER (ADMIN)
+// ==============================================
 type CreateUserRequest struct {
 	Name string `json:"name"`
 }
 
 func CreateUserController(c *fiber.Ctx) error {
 	var body CreateUserRequest
-
 	if err := c.BodyParser(&body); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid input"})
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
+	if body.Name == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Name is required"})
 	}
 
-	// Generate raw key
-	rawKey := uuid.New().String()
-
-	// Hash before storing
-	hash := sha256.Sum256([]byte(rawKey))
-	hashedKey := hex.EncodeToString(hash[:])
-
-	// Save hashed key
-	err := repository.CreateUser(context.Background(), body.Name, hashedKey)
+	user, apiKey, err := repository.CreateUser(context.Background(), body.Name)
 	if err != nil {
-		utils.Error("CreateUser failed: " + err.Error())
-		return c.Status(500).JSON(fiber.Map{"error": "failed to create user"})
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to create user"})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "user created",
-		"api_key": rawKey, // return RAW key only once
+		"user":    user,
+		"api_key": apiKey,
 	})
 }
 
-// ------------------------------------------------------
-// 2. ADD CREDITS (Admin)
-// ------------------------------------------------------
+// ==============================================
+// LIST USERS
+// ==============================================
+func GetUsersController(c *fiber.Ctx) error {
+	users, err := repository.GetAllUsers(context.Background())
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch users"})
+	}
+	return c.JSON(users)
+}
 
+// ==============================================
+// USER DETAILS
+// ==============================================
+func GetUserDetails(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+
+	user, err := repository.GetUserDetails(context.Background(), id)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "user not found"})
+	}
+
+	return c.JSON(user)
+}
+
+// ==============================================
+// USER LOGS
+// ==============================================
+func GetUserLogs(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+
+	logs, err := repository.FetchLogsByUser(context.Background(), id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch logs"})
+	}
+
+	return c.JSON(logs)
+}
+
+// ==============================================
+// USER DAILY USAGE
+// ==============================================
+func GetUserUsage(c *fiber.Ctx) error {
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid user id"})
+	}
+
+	usage, err := repository.GetDailyUsageHistory(context.Background(), id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch usage"})
+	}
+
+	return c.JSON(usage)
+}
+
+// ==============================================
+// ADD CREDITS
+// ==============================================
 type AddCreditsRequest struct {
-	Username string `json:"username"`
-	Credits  int    `json:"credits"`
+	UserID  int `json:"user_id"`
+	Credits int `json:"credits"`
 }
 
 func AddCreditsController(c *fiber.Ctx) error {
@@ -63,43 +112,58 @@ func AddCreditsController(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid input"})
 	}
 
-	// find by username
-	user, err := repository.GetUserByName(context.Background(), body.Username)
-	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "user not found"})
+	if body.Credits <= 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "credits must be positive"})
 	}
 
-	// add credits
-	err = repository.AddCredits(context.Background(), user.ID, body.Credits)
+	err := repository.AddCredits(context.Background(), body.UserID, body.Credits)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "failed to add credits"})
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "credits added",
-		"user_id": user.ID,
+		"message": "credits added successfully",
+		"user_id": body.UserID,
 		"credits": body.Credits,
 	})
 }
 
-// ------------------------------------------------------
-// 3. GET LOGS (Admin)
-// ------------------------------------------------------
-
+// ==============================================
+// GLOBAL LOGS
+// ==============================================
 func GetLogsController(c *fiber.Ctx) error {
-	ctx := context.Background()
-	logs, err := repository.FetchLogs(ctx)
+	logs, err := repository.FetchLogs(context.Background())
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "failed to fetch logs"})
 	}
 	return c.JSON(logs)
 }
-func GetUsersController(c *fiber.Ctx) error {
 
-	users, err := repository.GetAllUsers(context.Background())
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+// ==============================================
+// Feedback Management
+// ==============================================
+func AdminGetFeedback(c *fiber.Ctx) error {
+	page := c.QueryInt("page", 1)
+	if page < 1 {
+		page = 1
 	}
 
-	return c.JSON(users)
+	limit := 20
+	offset := (page - 1) * limit
+
+	feedback, total, err := repository.GetFeedback(context.Background(), limit, offset)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": "failed to load feedback",
+		})
+	}
+
+	totalPages := (total + limit - 1) / limit
+
+	return c.JSON(fiber.Map{
+		"data":       feedback,
+		"total":      total,
+		"page":       page,
+		"totalPages": totalPages,
+	})
 }

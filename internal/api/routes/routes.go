@@ -45,6 +45,9 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 		controllers.QueryController,
 	)
 
+	// feedback
+	user.Post("/feedback", controllers.SubmitFeedback)
+
 	// -----------------------------------------------------
 	// ADMIN ROUTES (Admin Key Only — NO RATE LIMIT)
 	// -----------------------------------------------------
@@ -60,7 +63,14 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 	admin.Post("/create-user", controllers.CreateUserController)
 	admin.Post("/add-credits", controllers.AddCreditsController)
 	admin.Get("/users", controllers.GetUsersController)
-	admin.Post("/regenerate-key", controllers.RegenerateAPIKeyController)
+	admin.Post("/user/:id/regenerate-key", controllers.RegenerateAPIKeyController)
+	admin.Get("/user/:id", controllers.GetUserDetails)
+	admin.Get("/user/:id/logs", controllers.GetUserLogs)
+	admin.Get("/user/:id/usage", controllers.GetUserUsage)
+	admin.Delete("/user/:id", controllers.DeleteUserController)
+
+	//feedback
+	admin.Get("/feedback", controllers.AdminGetFeedback)
 
 	// logs
 	admin.Get("/logs", controllers.GetLogsController)
