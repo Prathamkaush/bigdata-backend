@@ -57,12 +57,25 @@ func DeductCredits(ctx context.Context, userID int, amount int) error {
 // ===============================
 // ADD CREDITS
 // ===============================
-func AddCredits(ctx context.Context, userID int, amount int) error {
+func AddCredits(ctx context.Context, userID int, credits int) error {
+
+	// 1. Log credit addition
 	_, err := database.Postgres.Exec(ctx,
-		`UPDATE users 
+		`INSERT INTO credit_logs (user_id, change_amount, reason)
+         VALUES ($1, $2, $3)`,
+		userID, credits, "admin_added_credits",
+	)
+	if err != nil {
+		return err
+	}
+
+	// 2. Update balance
+	_, err = database.Postgres.Exec(ctx,
+		`UPDATE users
          SET credits = credits + $1
          WHERE id = $2`,
-		amount, userID)
+		credits, userID,
+	)
 
 	return err
 }

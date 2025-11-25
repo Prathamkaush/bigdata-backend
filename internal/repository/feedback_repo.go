@@ -4,15 +4,8 @@ import (
 	"bigdata-api/internal/database"
 	"bigdata-api/internal/models"
 	"context"
+	"time"
 )
-
-type Feedback struct {
-	ID        int    `json:"id"`
-	UserID    int    `json:"user_id"`
-	Message   string `json:"message"`
-	Rating    int    `json:"rating"`
-	CreatedAt string `json:"created_at"`
-}
 
 func CreateFeedback(ctx context.Context, userID int, msg string, rating int) error {
 	_, err := database.Postgres.Exec(ctx,
@@ -42,10 +35,41 @@ func GetFeedback(ctx context.Context, limit, offset int) ([]models.Feedback, int
 		feedbacks = append(feedbacks, f)
 	}
 
-	// Count total
-	row := database.Postgres.QueryRow(ctx, `SELECT COUNT(*) FROM feedback`)
+	// total count
 	var total int
-	row.Scan(&total)
+	_ = database.Postgres.QueryRow(ctx, `SELECT COUNT(*) FROM feedback`).Scan(&total)
 
 	return feedbacks, total, nil
+}
+
+type DailyFeedbackHistory struct {
+	Date  string `json:"date"`
+	Count int    `json:"count"`
+}
+
+func GetFeedbackHistory(ctx context.Context) ([]DailyFeedbackHistory, error) {
+	rows, err := database.Postgres.Query(ctx, `
+		SELECT DATE(created_at), COUNT(*)
+		FROM feedback
+		GROUP BY DATE(created_at)
+		ORDER BY DATE(created_at) ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var history []DailyFeedbackHistory
+
+	for rows.Next() {
+		var row DailyFeedbackHistory
+		var d time.Time
+
+		if err := rows.Scan(&d, &row.Count); err == nil {
+			row.Date = d.Format("2006-01-02")
+			history = append(history, row)
+		}
+	}
+
+	return history, nil
 }

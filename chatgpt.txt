@@ -1,79 +1,79 @@
 /bigdata-api
 │
 ├── cmd/
-│   ├── server/               # Main API server
+│   ├── server/                     # Main API Server (Fiber)
 │   │   └── main.go
 │   │
-│   ├── worker/               # Background worker service (future)
-│   │   └── main.go
+│   ├
+│   │   
 │   │
-│   └── cron/                 # Scheduled tasks (daily stats, cleanup)
-│       └── main.go
+│   └── 
+│       
 │
 ├── internal/
-│   ├── config/
-│   │   ├── config.go         # Load env, secrets, ports
-│   │   └── validate.go       # Validates required ENV vars
+│   ├── config/                     # Environment, Config Loader
+│   │   ├── config.go               # Load env vars
+│   │    
 │   │
-│   ├── database/
-│   │   ├── postgres.go       # Primary DB
-│   │   ├── redis.go          # Rate limit, caching
-│   │   └── clickhouse.go     # Analytics DB
+│   ├── database/                   # Database connections
+│   │   ├── postgres.go             # PostgreSQL (Users, Credits, Logs, Usage, Feedback)
+│   │   ├── redis.go                # Redis (Rate limits, caching)
+│   │   └── clickhouse.go           # ClickHouse (Analytics)
 │   │
 │   ├── api/
-│   │   ├── middlewares/
-│   │   │   ├── auth.go       
-│   │   │   ├── admin.go
-│   │   │   ├── ratelimit.go
-│   │   │   ├── credits.go
-│   │   │   ├── logging.go
-│   │   │   ├── recovery.go        # Panic handler middleware
-│   │   │   └── cors.go            # Custom CORS config
+│   │   ├── middlewares/            # Middlewares Layer
+│   │   │   ├── auth.go             # User API key validation
+│   │   │   ├── admin.go            # Admin key validation
+│   │   │   ├── ratelimit.go        # Redis rate limiter
+│   │   │   ├── credits.go          # Auto credit deduction
+│   │   │   ├── logging.go          # Request logging
+│   │   │    
+│   │   │   
 │   │   │
-│   │   ├── controllers/
+│   │   ├── controllers/            # Controllers (split by module)
 │   │   │   ├── auth/
 │   │   │   │   └── verify_key.go
 │   │   │   │
-│   │   │   ├── users/
+│   │   │   ├── users/              # Users Module
 │   │   │   │   ├── create.go
 │   │   │   │   ├── list.go
 │   │   │   │   ├── details.go
 │   │   │   │   ├── delete.go
 │   │   │   │   ├── regenerate.go
-│   │   │   │   └── update.go    (future)
+│   │   │   │   └── update.go       # (future)
 │   │   │   │
-│   │   │   ├── credits/
+│   │   │   ├── credits/            # Credits Module
 │   │   │   │   ├── add.go
 │   │   │   │   ├── deduct.go
 │   │   │   │   └── history.go
 │   │   │   │
-│   │   │   ├── feedback/
+│   │   │   ├── feedback/           # Feedback System
 │   │   │   │   ├── create.go
 │   │   │   │   ├── list.go
 │   │   │   │   ├── reply.go
 │   │   │   │   └── update_status.go
 │   │   │   │
-│   │   │   ├── logs/
+│   │   │   ├── logs/               # Logs Module
 │   │   │   │   ├── get_logs.go
 │   │   │   │   └── get_user_logs.go
 │   │   │   │
-│   │   │   ├── stats/
-│   │   │   │   ├── overview.go
-│   │   │   │   └── daily_usage.go
+│   │   │   ├── stats/              # Stats + Dashboard Data
+│   │   │   │   ├── overview.go     # Admin dashboard stats
+│   │   │   │   └── daily_usage.go  # 30-day usage
 │   │   │   │
-│   │   │   ├── system/
+│   │   │   ├── system/             # System Health
 │   │   │   │   ├── health.go
 │   │   │   │   └── metrics.go
 │   │   │   │
-│   │   │   └── query/
+│   │   │   └── query/              # Main Query Endpoint
 │   │   │       └── query_handler.go
 │   │   │
-│   │   └── routes/
-│   │       ├── public.go      # health, metrics, verify-key
-│   │       ├── user.go        # /v1/*
-│   │       └── admin.go       # /v1/admin/*
+│   │   └── routes/                 # Route Groups
+│   │       ├── public.go           # /v1/public → health, metrics, verify-key
+│   │       ├── user.go             # /v1 → API users
+│   │       └── admin.go            # /v1/admin → Admin routes
 │   │
-│   ├── repository/
+│   ├── repository/                 # Database Access Layer
 │   │   ├── user_repo.go
 │   │   ├── credit_repo.go
 │   │   ├── feedback_repo.go
@@ -81,9 +81,9 @@
 │   │   ├── logs_repo.go
 │   │   ├── stats_repo.go
 │   │   ├── system_repo.go
-│   │   └── record_repo.go        # ClickHouse SELECT with filters
+│   │   └── record_repo.go          # ClickHouse SELECT with filtering
 │   │
-│   ├── models/
+│   ├── models/                     # Data Models
 │   │   ├── user.go
 │   │   ├── credit.go
 │   │   ├── usage.go
@@ -92,35 +92,35 @@
 │   │   ├── record.go
 │   │   └── system.go
 │   │
-│   ├── ingestion/
+│   ├── ingestion/                  # Ingestion Engine (ClickHouse)
 │   │   ├── reader.go
 │   │   ├── normalize.go
 │   │   ├── dedupe.go
 │   │   └── loader.go
 │   │
-│   ├── utils/
+│   ├── utils/                      # Utilities
 │   │   ├── hasher.go
-│   │   ├── jwt.go               # future for user login
+│   │   ├── jwt.go                  # (future) JWT login for UI users
 │   │   ├── response.go
 │   │   ├── validator.go
 │   │   ├── pagination.go
 │   │   └── logger.go
 │   │
-│   └── services/
+│   └── services/                   # Business Logic Layer
 │       ├── credit_service.go
 │       ├── feedback_service.go
 │       ├── stats_service.go
 │       ├── notification_service.go
-│       └── email_service.go      # optional
+│       └── email_service.go        # Optional (SMTP, SendGrid)
 │
-├── migrations/                   # SQL migrations (future)
+├── migrations/                     # SQL Migrations (future)
 │
-├── scripts/
+├── scripts/                        # Dev/Utility scripts
 │   ├── migrate.go
 │   ├── ingest_csv.go
-│   └── dev_seed.go               # seed demo data
+│   └── dev_seed.go                 # Seed demo data
 │
-├── test/                         # backend unit tests (future)
+├── test/                           # Unit tests (future)
 │   ├── user_test.go
 │   ├── credits_test.go
 │   └── stats_test.go
@@ -130,25 +130,24 @@
 ├── go.sum
 └── README.md
 
-✅ Already Completed by Us
-
-✔ Users CRUD
-✔ Regenerate API key
-✔ Delete user
-✔ Logs + user logs
-✔ Credits add + usage
-✔ Stats (total requests, daily, credits used)
-✔ Query endpoint
-✔ Admin protection
-✔ Rate limiting
-✔ Feedback backend (create + list)
-
-Partially Done
-
-Credit history (audit log)
-
-Feedback status change (replied/resolved)
-
-System monitoring (RAM/CPU)
-
-Dynamic analytics (ClickHouse queries)
+📌 FINAL SUMMARY TABLE
+Feature	Status
+Users CRUD	✔ Done
+Admin Auth	✔ Done
+API Query	✔ Done
+Credits Add/Deduct	✔ Done
+Logs	✔ Done
+Feedback Create/List	✔ Done
+Stats Overview	✔ Done
+Daily Usage	✔ Done
+Credit History	🔶 Partial
+Feedback Reply/Status	🔶 Partial
+System Monitoring	🔶 Partial
+ClickHouse Analytics	❌ Not Started
+Worker	❌ Not Started
+Cron Jobs	❌ Not Started
+Services Layer	❌ Not Started
+Scripts	❌ Not Started
+Tests	❌ Not Started
+User Update API	❌ Not Started
+Roles & Permissions	❌ Not Started
