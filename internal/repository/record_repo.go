@@ -3,8 +3,9 @@ package repository
 import (
 	"bigdata-api/internal/database"
 	"context"
-	"reflect"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func SearchRecords(ctx context.Context, sql string, args []interface{}) ([]map[string]interface{}, error) {
@@ -21,39 +22,41 @@ func SearchRecords(ctx context.Context, sql string, args []interface{}) ([]map[s
 	results := make([]map[string]interface{}, 0)
 
 	for rows.Next() {
+
 		values := make([]interface{}, len(cols))
 
 		for i, ct := range colTypes {
-			kind := ct.ScanType().Kind()
 
-			switch kind {
+			switch ct.DatabaseTypeName() {
 
-			case reflect.String:
-				var v string
-				values[i] = &v
+			case "UUID":
+				values[i] = new(uuid.UUID)
 
-			case reflect.Int, reflect.Int32, reflect.Int64:
-				var v int64
-				values[i] = &v
+			case "Date", "Date32", "DateTime", "DateTime64":
+				values[i] = new(time.Time)
 
-			case reflect.Uint, reflect.Uint32, reflect.Uint64:
-				var v uint64
-				values[i] = &v
+			case "String":
+				values[i] = new(string)
 
-			case reflect.Float32, reflect.Float64:
-				var v float64
-				values[i] = &v
+			case "Int8", "Int16", "Int32", "Int64":
+				values[i] = new(int64)
+
+			// 🔥 FIXED: UInt16 must scan into *uint16
+			case "UInt8", "UInt16":
+				values[i] = new(uint16)
+
+			case "UInt32":
+				values[i] = new(uint32)
+
+			case "UInt64":
+				values[i] = new(uint64)
+
+			case "Float32", "Float64":
+				values[i] = new(float64)
 
 			default:
-				// Special case for ClickHouse DateTime, Date, Date32
-				if ct.ScanType() == reflect.TypeOf(time.Time{}) {
-					var v time.Time
-					values[i] = &v
-				} else {
-					// Fallback: string
-					var v string
-					values[i] = &v
-				}
+				var v interface{}
+				values[i] = &v
 			}
 		}
 
@@ -62,49 +65,54 @@ func SearchRecords(ctx context.Context, sql string, args []interface{}) ([]map[s
 		}
 
 		rowMap := make(map[string]interface{}, len(cols))
-		for idx, col := range cols {
-			rowMap[col] = deref(values[idx])
+		for i, col := range cols {
+			rowMap[col] = deref(values[i])
 		}
 
 		results = append(results, rowMap)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return results, nil
+}
+
+func deref(v interface{}) interface{} {
+	switch t := v.(type) {
+
+	case *uuid.UUID:
+		return t.String()
+
+	case *time.Time:
+		return t.Format(time.RFC3339)
+
+	case *string:
+		return *t
+
+	case *int64:
+		return *t
+
+	case *uint16:
+		return *t
+
+	case *uint32:
+		return *t
+
+	case *uint64:
+		return *t
+
+	case *float64:
+		return *t
+
+	case *interface{}:
+		return *t
+
+	default:
+		return t
+	}
 }
 
 func CountRecords(ctx context.Context, sql string, args []interface{}) (uint64, error) {
 	row := database.ClickHouse.QueryRow(ctx, sql, args...)
-
 	var count uint64
-	if err := row.Scan(&count); err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
-func deref(ptr interface{}) interface{} {
-	switch v := ptr.(type) {
-	case *string:
-		return *v
-	case *int32:
-		return *v
-	case *int64:
-		return *v
-	case *uint32:
-		return *v
-	case *uint64:
-		return *v
-	case *float32:
-		return *v
-	case *float64:
-		return *v
-	case *time.Time:
-		return v.Format(time.RFC3339) // return as ISO string
-	default:
-		return v
-	}
+	err := row.Scan(&count)
+	return count, err
 }

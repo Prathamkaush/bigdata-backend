@@ -1,79 +1,77 @@
 /bigdata-api
 │
 ├── cmd/
-│   ├── server/                     # Main API Server (Fiber)
-│   │   └── main.go
+│   ├── server/                       # Main API binary
+│   │   └── main.go                   # Initialize Fiber + DB + routes
 │   │
-│   ├
-│   │   
-│   │
-│   └── 
-│       
+│   └── worker/                       # Background ingestion workers (future)
+│       └── worker.go
 │
 ├── internal/
-│   ├── config/                     # Environment, Config Loader
-│   │   ├── config.go               # Load env vars
-│   │    
+│   ├── config/                       # Configuration / Environment
+│   │   ├── config.go                 # Load .env vars
+│   │   └── loader.go                 # Validate config values
 │   │
-│   ├── database/                   # Database connections
-│   │   ├── postgres.go             # PostgreSQL (Users, Credits, Logs, Usage, Feedback)
-│   │   ├── redis.go                # Redis (Rate limits, caching)
-│   │   └── clickhouse.go           # ClickHouse (Analytics)
+│   ├── database/                     # DB Connections
+│   │   ├── postgres.go               # Users, Credits, Logs, Usage, Feedback
+│   │   ├── redis.go                  # Rate limiting, caching
+│   │   └── clickhouse.go             # Analytics, records ingestion
 │   │
 │   ├── api/
-│   │   ├── middlewares/            # Middlewares Layer
-│   │   │   ├── auth.go             # User API key validation
-│   │   │   ├── admin.go            # Admin key validation
-│   │   │   ├── ratelimit.go        # Redis rate limiter
-│   │   │   ├── credits.go          # Auto credit deduction
-│   │   │   ├── logging.go          # Request logging
-│   │   │    
-│   │   │   
+│   │   ├── middlewares/
+│   │   │   ├── auth.go               # User API key validator
+│   │   │   ├── admin.go              # Admin / Sub-admin key validator
+│   │   │   ├── ratelimit.go          # Redis limiter (query only)
+│   │   │   ├── credits.go            # Deduct credits per request
+│   │   │   ├── logging.go            # Save logs to PostgreSQL
+│   │   │   └── cors.go               # Allow FE to connect
 │   │   │
-│   │   ├── controllers/            # Controllers (split by module)
-│   │   │   ├── auth/
+│   │   ├── controllers/
+│   │   │   │
+│   │   │   ├── auth/                 # Admin login / verify
 │   │   │   │   └── verify_key.go
 │   │   │   │
-│   │   │   ├── users/              # Users Module
+│   │   │   ├── users/                # Users module (Admin Panel)
 │   │   │   │   ├── create.go
 │   │   │   │   ├── list.go
 │   │   │   │   ├── details.go
 │   │   │   │   ├── delete.go
 │   │   │   │   ├── regenerate.go
-│   │   │   │   └── update.go       # (future)
+│   │   │   │   ├── update.go
+│   │   │   │   └── change_role.go    # admin → sub-admin → user
 │   │   │   │
-│   │   │   ├── credits/            # Credits Module
+│   │   │   ├── credits/
 │   │   │   │   ├── add.go
 │   │   │   │   ├── deduct.go
-│   │   │   │   └── history.go
+│   │   │   │   └── history.go        # credit_logs table
 │   │   │   │
-│   │   │   ├── feedback/           # Feedback System
+│   │   │   ├── feedback/
 │   │   │   │   ├── create.go
 │   │   │   │   ├── list.go
 │   │   │   │   ├── reply.go
 │   │   │   │   └── update_status.go
 │   │   │   │
-│   │   │   ├── logs/               # Logs Module
+│   │   │   ├── logs/
 │   │   │   │   ├── get_logs.go
 │   │   │   │   └── get_user_logs.go
 │   │   │   │
-│   │   │   ├── stats/              # Stats + Dashboard Data
-│   │   │   │   ├── overview.go     # Admin dashboard stats
-│   │   │   │   └── daily_usage.go  # 30-day usage
+│   │   │   ├── stats/
+│   │   │   │   ├── overview.go       # Total users, credits, API usage
+│   │   │   │   └── daily_usage.go    # 30-day usage graph
 │   │   │   │
-│   │   │   ├── system/             # System Health
-│   │   │   │   ├── health.go
-│   │   │   │   └── metrics.go
+│   │   │   ├── system/
+│   │   │   │   ├── health.go         # CPU/RAM/DB
+│   │   │   │   └── metrics.go        # Prometheus style metrics (future)
 │   │   │   │
-│   │   │   └── query/              # Main Query Endpoint
-│   │   │       └── query_handler.go
+│   │   │   └── query/
+│   │   │       └── query_handler.go  # User POST /query endpoint
 │   │   │
-│   │   └── routes/                 # Route Groups
-│   │       ├── public.go           # /v1/public → health, metrics, verify-key
-│   │       ├── user.go             # /v1 → API users
-│   │       └── admin.go            # /v1/admin → Admin routes
+│   │   └── routes/
+│   │       ├── public.go             # /v1/health, /metrics, /verify-key
+│   │       ├── user.go               # Needs API key (query, feedback)
+│   │       └── admin.go              # Admin protected routes
 │   │
-│   ├── repository/                 # Database Access Layer
+│   ├── repository/                   # Database layer (SQL only)
 │   │   ├── user_repo.go
 │   │   ├── credit_repo.go
 │   │   ├── feedback_repo.go
@@ -81,73 +79,76 @@
 │   │   ├── logs_repo.go
 │   │   ├── stats_repo.go
 │   │   ├── system_repo.go
-│   │   └── record_repo.go          # ClickHouse SELECT with filtering
+│   │   └── record_repo.go            # ClickHouse SELECTs
 │   │
-│   ├── models/                     # Data Models
+│   ├── services/                     # Business Logic Layer
+│   │   ├── credit_service.go
+│   │   ├── feedback_service.go
+│   │   ├── stats_service.go
+│   │   ├── user_service.go
+│   │   ├── record_service.go
+│   │   ├── notification_service.go
+│   │   └── email_service.go          # SMTP / SendGrid (optional)
+│   │
+│   ├── models/                       # All data structures
 │   │   ├── user.go
 │   │   ├── credit.go
-│   │   ├── usage.go
-│   │   ├── logs.go
 │   │   ├── feedback.go
+│   │   ├── logs.go
+│   │   ├── usage.go
 │   │   ├── record.go
 │   │   └── system.go
 │   │
-│   ├── ingestion/                  # Ingestion Engine (ClickHouse)
-│   │   ├── reader.go
-│   │   ├── normalize.go
-│   │   ├── dedupe.go
-│   │   └── loader.go
+│   ├── ingestion/                    # ClickHouse Pipeline
+│   │   ├── reader.go                 # Read from API / CSV / queue
+│   │   ├── normalize.go              # Clean + normalize fields
+│   │   ├── dedupe.go                 # Generate dedupe key
+│   │   └── loader.go                 # Insert into CH
 │   │
-│   ├── utils/                      # Utilities
-│   │   ├── hasher.go
-│   │   ├── jwt.go                  # (future) JWT login for UI users
-│   │   ├── response.go
-│   │   ├── validator.go
+│   ├── utils/
+│   │   ├── hasher.go                 # Hash API keys
+│   │   ├── logger.go                 # Request logs
+│   │   ├── response.go               # JSON helpers
 │   │   ├── pagination.go
-│   │   └── logger.go
+│   │   ├── validator.go
+│   │   └── random.go                 # random keys/usernames
 │   │
-│   └── services/                   # Business Logic Layer
-│       ├── credit_service.go
-│       ├── feedback_service.go
-│       ├── stats_service.go
-│       ├── notification_service.go
-│       └── email_service.go        # Optional (SMTP, SendGrid)
+│   └── workers/                      # Background async workers
+│       └── clickhouse_worker.go      # ingestion queue processor (future)
 │
-├── migrations/                     # SQL Migrations (future)
+├── migrations/                       # SQL migration files
+│   ├── 001_users.sql
+│   ├── 002_credits.sql
+│   ├── 003_logs.sql
+│   ├── 004_feedback.sql
+│   ├── 005_daily_usage.sql
+│   └── 006_normalized_records.sql
 │
-├── scripts/                        # Dev/Utility scripts
-│   ├── migrate.go
-│   ├── ingest_csv.go
-│   └── dev_seed.go                 # Seed demo data
+├── scripts/
+│   ├── migrate.go                    # Run migrations
+│   ├── ingest_csv.go                 # Batch import CSV → ClickHouse
+│   └── dev_seed.go                   # Fake sample data
 │
-├── test/                           # Unit tests (future)
+├── test/
 │   ├── user_test.go
 │   ├── credits_test.go
 │   └── stats_test.go
 │
-├── .env
+├── Dockerfile
+├── docker-compose.yml
 ├── go.mod
 ├── go.sum
 └── README.md
 
-📌 FINAL SUMMARY TABLE
+❌ WHAT IS NOT BUILT YET (BUT INCLUDED IN STRUCTURE)
+
+These features you want later:
+
 Feature	Status
-Users CRUD	✔ Done
-Admin Auth	✔ Done
-API Query	✔ Done
-Credits Add/Deduct	✔ Done
-Logs	✔ Done
-Feedback Create/List	✔ Done
-Stats Overview	✔ Done
-Daily Usage	✔ Done
-Credit History	🔶 Partial
-Feedback Reply/Status	🔶 Partial
-System Monitoring	🔶 Partial
-ClickHouse Analytics	❌ Not Started
-Worker	❌ Not Started
-Cron Jobs	❌ Not Started
-Services Layer	❌ Not Started
-Scripts	❌ Not Started
-Tests	❌ Not Started
-User Update API	❌ Not Started
-Roles & Permissions	❌ Not Started
+ClickHouse analytics dashboards	❌
+Query heatmap	❌
+Worker queue system	❌
+Cron jobs (reset usage daily)	❌
+SMTP email notifications	❌
+Test Suite	❌
+JWT login for Admin UI	❌

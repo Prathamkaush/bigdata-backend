@@ -52,11 +52,11 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 	// ADMIN ROUTES (Admin Key Only — NO RATE LIMIT)
 	// -----------------------------------------------------
 	admin := api.Group("/admin",
-		middlewares.AdminMiddleware(), // only admin API key allowed
+		middlewares.AdminMiddleware(),
 		middlewares.LoggingMiddleware(),
 	)
 
-	// moved stats → no rate-limit now
+	// Stats
 	admin.Get("/stats", controllers.StatsController)
 
 	// user management
@@ -69,12 +69,22 @@ func InitRoutes(cfg *config.Config) *fiber.App {
 	admin.Get("/user/:id/usage", controllers.GetUserUsage)
 	admin.Delete("/user/:id", controllers.DeleteUserController)
 
-	//feedback
+	// NEW Role / Status / Credits management
+	admin.Post("/user/:id/change-role", controllers.ChangeUserRoleController)
+	admin.Post("/user/:id/status", controllers.UpdateUserStatusController)
+	admin.Post("/user/:id/update-credits", controllers.UpdateUserCreditsController)
+	admin.Post("/user/:id/disable", controllers.DisableUserController)
+
+	// feedback
 	admin.Get("/feedback", controllers.AdminGetFeedback)
 
 	// logs
 	admin.Get("/logs", controllers.GetLogsController)
 	admin.Get("/api-key", controllers.GetAdminAPIKey)
+
+	// records
+	admin.Get("/records", controllers.GetRecords)
+	admin.Get("/records/count", controllers.CountRecordsController)
 
 	return app
 }
