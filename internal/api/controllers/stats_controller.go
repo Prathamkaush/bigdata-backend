@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"log"
 
 	"bigdata-api/internal/repository"
 
@@ -22,7 +21,6 @@ func StatsController(c *fiber.Ctx) error {
 	newFeedbackToday, _ := repository.NewFeedbackCount(ctx)
 
 	last30Days, _ := repository.Get30DayUsage(ctx)
-	log.Println("🔥 NEW StatsController loaded!!!", last30Days)
 
 	return c.JSON(fiber.Map{
 		"total_users":    totalUsers,
